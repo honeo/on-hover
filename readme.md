@@ -22,7 +22,7 @@ import onHover from 'on-hover';
 ```
 
 ## onHover(element|selector [, options])
-引数1の要素またはselectorと一致する要素にhover系イベントを実装する。
+引数1の要素またはselectorと一致する要素にhoverイベント(hoverin, hoverout)を実装する。
 
 ```js
 // element
@@ -30,6 +30,7 @@ onHover(element);
 element.addEventListener('hoverin', (e)=>{
 	console.log(e.clientX, e.clientY); // number, number
 });
+element.addEventListener('hoverout', listener);
 
 /*
 	selector
@@ -38,17 +39,26 @@ element.addEventListener('hoverin', (e)=>{
 onHover('div.hoge');
 document.querySelectorAll('div.hoge')[2501].addEventListener('hoverin', listener);
 
+// global
+onHover('*');
+document.body.firstElementChild.addEventListener('hoverin', listener);
+
+
+/*
+	options
+*/
+
+// options
+{
+	signal: abortSignal, // イベント解除用
+	delay: 100, // ms, hover判定までの猶予ms
+	inset: '10%' // "%|px", hover判定を猶予する要素外周からの距離
+}
+
 // options.signal
 const abort = new AbortController();
 onHover(element, {signal: abort.signal});
 element.addEventListener('hoverout', (e)=>{
 	abort.abort()
 }, {once: true});
-
-// default options
-{
-	signal: abortSignal, // イベント解除用
-	delay: 100, // ms, hover判定までの猶予ms
-	inset: '10%' // "%|px", hover判定を猶予する要素外周からの距離
-}
 ```
