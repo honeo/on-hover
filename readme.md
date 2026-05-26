@@ -5,8 +5,11 @@
 
 ## なにこれ
 JS制御によるHoverイベントの実装。
+
 [MouseEvent](https://developer.mozilla.org/ja/docs/Web/API/MouseEvent)を継承している。
+
 __[Demo](https://honeo.github.io/on-hover/test/index.html)__
+
 ### 注意
 CSSの :hover 状態とは異なる。
 
