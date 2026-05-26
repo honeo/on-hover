@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <meta charset="UTF-8">
 <title>on-hover test</title>
+<!-- built: 2026-05-27 -->
 <!--
 	起動:
 		npx serve ../
@@ -14,6 +15,7 @@
 	section { margin-bottom: 2em; }
 	h2 { font-size: 1em; margin: 0 0 .5em; }
 	.box {
+		position: relative;
 		display: inline-flex; align-items: center; justify-content: center;
 		width: 160px; height: 80px; margin: 4px;
 		border: 2px solid #888; border-radius: 4px;
@@ -24,6 +26,21 @@
 	}
 	.box.hoverin { background: #cfc; border-color: #080; }
 	.box.hoverout { background: #fee; border-color: #c00; }
+	.zone-inner {
+		position: absolute;
+		border: 1px dashed #999;
+		background: rgba(0,180,0,0.07);
+		pointer-events: none;
+		box-sizing: border-box;
+	}
+	.hidden { display: none; }
+	.legend { font-size: 13px; color: #555; margin: 0 0 1em; }
+	.legend .swatch {
+		display: inline-block; width: 12px; height: 12px;
+		border: 1px dashed #999;
+		background: rgba(0,180,0,0.07);
+		vertical-align: middle; margin-right: 4px;
+	}
 	pre { font-size: 12px; background: #f5f5f5; padding: .5em; border-radius: 4px; }
 	button { padding: 4px 12px; }
 	.log { font-size: 12px; color: #555; max-height: 200px; overflow: auto; }
@@ -31,27 +48,52 @@
 
 <h1>on-hover test</h1>
 
+<p class="legend">
+	<span class="swatch"></span>
+	内側ゾーン（中央の枠内）にカーソルがあるとき即座に
+	<code>hoverin</code> が発火。
+	外側ゾーンでは <code>delay</code> ミリ秒後に発火。
+</p>
+
 <section>
 	<h2>Element mode (default: inset 10%, delay 100ms)</h2>
-	<div id="el-default" class="box">hover me</div>
+	<div id="el-default" class="box">
+		hover me
+		<span class="zone-inner"></span>
+	</div>
 </section>
 
 <section>
 	<h2>Element mode (inset: 30%, delay: 500ms)</h2>
-	<div id="el-wide" class="box">hover me</div>
+	<div id="el-wide" class="box">
+		hover me
+		<span class="zone-inner"></span>
+	</div>
 </section>
 
 <section>
 	<h2>Selector mode (div.selector-target)</h2>
-	<div class="selector-target box">target 1</div>
-	<div class="selector-target box">target 2</div>
-	<div class="selector-target box" style="display:none">hidden</div>
+	<div class="selector-target box">
+		target 1
+		<span class="zone-inner"></span>
+	</div>
+	<div class="selector-target box">
+		target 2
+		<span class="zone-inner"></span>
+	</div>
+	<div class="selector-target box hidden">
+		hidden
+		<span class="zone-inner"></span>
+	</div>
 	<button id="btn-show-hidden">show hidden</button>
 </section>
 
 <section>
 	<h2>Signal abort</h2>
-	<div id="el-signal" class="box">hover me<br>then click Abort</div>
+	<div id="el-signal" class="box">
+		hover me<br>then click Abort
+		<span class="zone-inner"></span>
+	</div>
 	<button id="btn-abort">Abort signal</button>
 	<span id="signal-status" style="font-size:12px;color:#999">active</span>
 </section>
@@ -72,6 +114,55 @@
 		logEl.appendChild(line);
 	};
 
+	/* ---- ゾーン表示 ---- */
+
+	function showZone(box, insetStr) {
+		const inner = box.querySelector('.zone-inner');
+		if (!inner) return;
+		const rect = box.getBoundingClientRect();
+		const cs = getComputedStyle(box);
+		const bw = parseFloat(cs.borderTopWidth) || 0;
+		const match = String(insetStr).match(/^(\d+(?:\.\d+)?)(px|%)$/);
+		const val = match ? +match[1] : 10;
+		const mode = match ? match[2] : '%';
+		let top, left, w, h;
+		if (mode === '%') {
+			top = rect.height * val / 100 - bw;
+			left = rect.width * val / 100 - bw;
+		} else {
+			top = left = val - bw;
+		}
+		w = Math.max(0, rect.width - (left + bw) * 2);
+		h = Math.max(0, rect.height - (top + bw) * 2);
+		inner.style.cssText = `
+			top: ${top}px;
+			left: ${left}px;
+			width: ${w}px;
+			height: ${h}px;
+			border: 1px dashed #999;
+			background: rgba(0,180,0,0.07);
+			pointer-events: none;
+			box-sizing: border-box;
+		`;
+	}
+
+	const boxesWithInset = [
+		{ el: document.getElementById('el-default'), inset: '10%' },
+		{ el: document.getElementById('el-wide'), inset: '30%' },
+		{ el: document.getElementById('el-signal'), inset: '10%' },
+	];
+
+	document.querySelectorAll('div.selector-target').forEach((el) => {
+		boxesWithInset.push({ el, inset: '10%' });
+	});
+
+	boxesWithInset.forEach(({ el, inset }) => showZone(el, inset));
+
+	const ro = new ResizeObserver(() => {
+		boxesWithInset.forEach(({ el, inset }) => showZone(el, inset));
+	});
+	boxesWithInset.forEach(({ el }) => ro.observe(el));
+
 	/* ---- Element mode (default) ---- */
 
 	const elDefault = document.getElementById('el-default');
@@ -81,7 +172,7 @@
 		elDefault.classList.remove('hoverout');
 		log(`hoverin element(default)  x:${e.clientX} y:${e.clientY}`);
 	});
-	elDefault.addEventListener('hoverout', (e) => {
+	elDefault.addEventListener('hoverout', () => {
 		elDefault.classList.add('hoverout');
 		elDefault.classList.remove('hoverin');
 		log(`hoverout element(default)`);
@@ -119,12 +210,23 @@
 		});
 	});
 
+	const toggleTarget = document.querySelector('div.selector-target.hidden');
 	document.getElementById('btn-show-hidden').addEventListener('click', () => {
-		const target = document.querySelector('div.selector-target[style*="display:none"]');
-		if (target) {
-			target.style.display = '';
-			target.textContent = 'target 3 (dynamic)';
+		if (!toggleTarget) return;
+		const isHidden = toggleTarget.classList.toggle('hidden');
+		if (!isHidden) {
+			if (!toggleTarget.dataset.initialized) {
+				toggleTarget.dataset.initialized = '1';
+				toggleTarget.textContent = 'target 3 (dynamic)';
+				showZone(toggleTarget, '10%');
+				ro.observe(toggleTarget);
+				boxesWithInset.push({ el: toggleTarget, inset: '10%' });
+			}
 			log('revealed hidden element');
+			document.getElementById('btn-show-hidden').textContent = 'hide';
+		} else {
+			log('hid element');
+			document.getElementById('btn-show-hidden').textContent = 'show hidden';
 		}
 	});
 

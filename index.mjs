@@ -155,6 +155,21 @@ function onMouseOver(e) {
 	startTimer(el, state, reg.delay);
 }
 
+function onMouseMove(e) {
+	const matched = findTargetElement(e.target);
+	if (!matched) return;
+	const { el, reg } = matched;
+
+	const state = stateWeakMap.get(el);
+	if (!state || state.active || !state.timer) return;
+
+	if (isInsideZone(e, el, reg.inset, reg.mode)) {
+		clearTimeout(state.timer);
+		state.timer = null;
+		fireIn(el, state, e);
+	}
+}
+
 function onMouseOut(e) {
 	const matched = findTargetElement(e.target);
 	if (!matched) return;
@@ -176,6 +191,7 @@ function onMouseOut(e) {
 function initDelegation() {
 	if (delegationInited) return;
 	document.addEventListener('mouseover', onMouseOver, {capture: true});
+	document.addEventListener('mousemove', onMouseMove, {capture: true});
 	document.addEventListener('mouseout', onMouseOut, {capture: true});
 	delegationInited = true;
 }
@@ -183,6 +199,7 @@ function initDelegation() {
 function stopDelegationIfEmpty() {
 	if (selectorRegs.length === 0 && elementModeCount === 0 && delegationInited) {
 		document.removeEventListener('mouseover', onMouseOver, {capture: true});
+		document.removeEventListener('mousemove', onMouseMove, {capture: true});
 		document.removeEventListener('mouseout', onMouseOut, {capture: true});
 		delegationInited = false;
 	}
