@@ -1,0 +1,27 @@
+{
+  "name": "on-hover",
+  "version": "1.0.0",
+  "description": "hover event",
+  "keywords": [
+    "hover",
+    "event"
+  ],
+  "homepage": "https://github.com/honeo/on-hover#readme",
+  "bugs": {
+    "url": "https://github.com/honeo/on-hover/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/honeo/on-hover.git"
+  },
+  "license": "MIT",
+  "author": "honeo",
+  "type": "module",
+  "main": "index.mjs",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "npx http-server . -o /test/index.html -a localhost"
+  }
+}

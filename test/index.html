@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<title>on-hover test</title>
+<!--
+	起動:
+		npx serve ../
+		cd .. && python -m http.server
+		deno task start  など
+	プロジェクトルートをサーブして /test/index.html を開く。
+	file:// だと ES module がクロスディレクトリでブロックされる場合あり。
+-->
+<style>
+	body { font-family: sans-serif; margin: 2em; }
+	section { margin-bottom: 2em; }
+	h2 { font-size: 1em; margin: 0 0 .5em; }
+	.box {
+		display: inline-flex; align-items: center; justify-content: center;
+		width: 160px; height: 80px; margin: 4px;
+		border: 2px solid #888; border-radius: 4px;
+		background: #eee; color: #333;
+		font-size: 13px; text-align: center;
+		transition: background .15s, border-color .15s;
+		user-select: none;
+	}
+	.box.hoverin { background: #cfc; border-color: #080; }
+	.box.hoverout { background: #fee; border-color: #c00; }
+	pre { font-size: 12px; background: #f5f5f5; padding: .5em; border-radius: 4px; }
+	button { padding: 4px 12px; }
+	.log { font-size: 12px; color: #555; max-height: 200px; overflow: auto; }
+</style>
+
+<h1>on-hover test</h1>
+
+<section>
+	<h2>Element mode (default: inset 10%, delay 100ms)</h2>
+	<div id="el-default" class="box">hover me</div>
+</section>
+
+<section>
+	<h2>Element mode (inset: 30%, delay: 500ms)</h2>
+	<div id="el-wide" class="box">hover me</div>
+</section>
+
+<section>
+	<h2>Selector mode (div.selector-target)</h2>
+	<div class="selector-target box">target 1</div>
+	<div class="selector-target box">target 2</div>
+	<div class="selector-target box" style="display:none">hidden</div>
+	<button id="btn-show-hidden">show hidden</button>
+</section>
+
+<section>
+	<h2>Signal abort</h2>
+	<div id="el-signal" class="box">hover me<br>then click Abort</div>
+	<button id="btn-abort">Abort signal</button>
+	<span id="signal-status" style="font-size:12px;color:#999">active</span>
+</section>
+
+<section>
+	<h2>Log</h2>
+	<div class="log" id="log"></div>
+	<button id="btn-clear-log">clear</button>
+</section>
+
+<script type="module">
+	import onHover from '../index.mjs';
+
+	const logEl = document.getElementById('log');
+	const log = (msg) => {
+		const line = document.createElement('div');
+		line.textContent = msg;
+		logEl.appendChild(line);
+	};
+
+	/* ---- Element mode (default) ---- */
+
+	const elDefault = document.getElementById('el-default');
+	onHover(elDefault);
+	elDefault.addEventListener('hoverin', (e) => {
+		elDefault.classList.add('hoverin');
+		elDefault.classList.remove('hoverout');
+		log(`hoverin element(default)  x:${e.clientX} y:${e.clientY}`);
+	});
+	elDefault.addEventListener('hoverout', (e) => {
+		elDefault.classList.add('hoverout');
+		elDefault.classList.remove('hoverin');
+		log(`hoverout element(default)`);
+	});
+
+	/* ---- Element mode (custom inset/delay) ---- */
+
+	const elWide = document.getElementById('el-wide');
+	onHover(elWide, { inset: '30%', delay: 500 });
+	elWide.addEventListener('hoverin', (e) => {
+		elWide.classList.add('hoverin');
+		elWide.classList.remove('hoverout');
+		log(`hoverin element(inset30%,delay500)  x:${e.clientX} y:${e.clientY}`);
+	});
+	elWide.addEventListener('hoverout', () => {
+		elWide.classList.add('hoverout');
+		elWide.classList.remove('hoverin');
+		log(`hoverout element(inset30%,delay500)`);
+	});
+
+	/* ---- Selector mode ---- */
+
+	onHover('div.selector-target');
+
+	document.querySelectorAll('div.selector-target').forEach((el) => {
+		el.addEventListener('hoverin', (e) => {
+			el.classList.add('hoverin');
+			el.classList.remove('hoverout');
+			log(`hoverin selector  ${el.textContent.trim()}  x:${e.clientX} y:${e.clientY}`);
+		});
+		el.addEventListener('hoverout', () => {
+			el.classList.add('hoverout');
+			el.classList.remove('hoverin');
+			log(`hoverout selector  ${el.textContent.trim()}`);
+		});
+	});
+
+	document.getElementById('btn-show-hidden').addEventListener('click', () => {
+		const target = document.querySelector('div.selector-target[style*="display:none"]');
+		if (target) {
+			target.style.display = '';
+			target.textContent = 'target 3 (dynamic)';
+			log('revealed hidden element');
+		}
+	});
+
+	/* ---- Signal abort ---- */
+
+	const ac = new AbortController();
+	const elSignal = document.getElementById('el-signal');
+	onHover(elSignal, { signal: ac.signal });
+	const logSignal = (msg) => log(`[signal] ${msg}`);
+
+	elSignal.addEventListener('hoverin', (e) => {
+		elSignal.classList.add('hoverin');
+		elSignal.classList.remove('hoverout');
+		logSignal(`hoverin  x:${e.clientX} y:${e.clientY}`);
+	});
+	elSignal.addEventListener('hoverout', () => {
+		elSignal.classList.add('hoverout');
+		elSignal.classList.remove('hoverin');
+		logSignal('hoverout');
+	});
+
+	document.getElementById('btn-abort').addEventListener('click', () => {
+		if (ac.signal.aborted) return;
+		ac.abort();
+		document.getElementById('signal-status').textContent = 'aborted (no more events)';
+		logSignal('signal aborted — listener removed');
+	});
+
+	/* ---- Clear log ---- */
+
+	document.getElementById('btn-clear-log').addEventListener('click', () => {
+		logEl.innerHTML = '';
+	});
+</script>
